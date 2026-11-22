@@ -52,9 +52,9 @@ export function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-500">
-        <div className="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-xs font-semibold text-slate-600">Loading portal...</p>
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
+        <div className="w-5 h-5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-xs font-medium text-zinc-600">Loading...</p>
       </div>
     );
   }
@@ -71,8 +71,7 @@ export function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900">
-      {/* Sidebar with Desktop & Mobile Drawer mode */}
+    <div className="min-h-screen flex bg-zinc-50/70 text-zinc-900">
       <Sidebar
         user={data.user}
         activeCentre={data.activeCentre}
@@ -87,7 +86,7 @@ export function DashboardLayout({
           onMenuClick={() => setMobileMenuOpen(true)}
         />
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto pb-24 md:pb-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto pb-24 md:pb-8 anim-in">
           {children}
         </main>
       </div>
@@ -95,7 +94,7 @@ export function DashboardLayout({
       {/* ── Mobile Floating Bottom Navigation ── */}
       <nav
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-3 py-1.5 flex items-center justify-around shadow-sm"
       >
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
@@ -104,23 +103,22 @@ export function DashboardLayout({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2 rounded-lg transition-colors ${
-                isActive ? "text-blue-600 font-extrabold" : "text-slate-500 hover:text-slate-900"
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-medium py-1 px-2 rounded-md transition-colors ${
+                isActive ? "text-zinc-950 font-semibold" : "text-zinc-500 hover:text-zinc-900"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
+              <Icon className={`w-4 h-4 ${isActive ? "text-zinc-950" : "text-zinc-400"}`} />
               <span>{item.label}</span>
             </Link>
           );
         })}
 
-        {/* More Button to trigger drawer */}
         <button
           onClick={() => setMobileMenuOpen(true)}
           type="button"
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2 text-slate-500 hover:text-slate-900 rounded-lg transition-colors"
+          className="flex flex-col items-center gap-0.5 text-[10px] font-medium py-1 px-2 text-zinc-500 hover:text-zinc-900 rounded-md transition-colors"
         >
-          <Menu className="w-4 h-4 text-slate-400" />
+          <Menu className="w-4 h-4 text-zinc-400" />
           <span>More</span>
         </button>
       </nav>
