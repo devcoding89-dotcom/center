@@ -10,15 +10,12 @@ out/
 build/
 **/build/
 
-# SQLite & databases
-*.db
+# SQLite & databases (keep seeded prisma/dev.db for standalone deployments)
 *.db-journal
-dev.db
-**/dev.db
 **/dev.db-journal
 
 # Environment files
-.env
+.env.local
 .env*.local
 
 # Logs
