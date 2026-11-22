@@ -1,0 +1,475 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  passwordHash  String
+  fullName      String
+  phoneNumber   String?
+  avatarUrl     String?
+  isSuperAdmin  Boolean      @default(false)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+  studentProfile StudentProfile?
+  staffProfile   StaffProfile?
+  notifications Notification[]
+}
+
+model Centre {
+  id              String       @id @default(uuid())
+  name            String
+  slug            String       @unique
+  registrationNo  String?
+  email           String
+  phone           String
+  address         String?
+  city            String?
+  state           String?      // e.g., Lagos, Abuja FCT, Oyo, Rivers
+  logoUrl         String?
+  status          String       @default("ACTIVE") // CentreStatus
+  currency        String       @default("NGN")
+  academicSession String       @default("2026/2027")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  branches        Branch[]
+  memberships     Membership[]
+  programmes      Programme[]
+  classBatches    ClassBatch[]
+  subjects        Subject[]
+  feeStructures   FeeStructure[]
+  invoices        Invoice[]
+  payments        Payment[]
+  announcements   Announcement[]
+  subscription    CentreSubscription?
+  learningIntegrations LearningIntegration[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  supportTickets  SupportTicket[]
+  saasPayments    SaasPayment[]
+}
+
+model Branch {
+  id          String       @id @default(uuid())
+  centreId    String
+  name        String       // e.g. "Main Campus - Yaba", "Annex - Ikeja"
+  address     String?
+  phone       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  classBatches ClassBatch[]
+
+  @@index([centreId])
+}
+
+model Membership {
+  id          String       @id @default(uuid())
+  userId      String
+  centreId    String
+  role        String       // Role (SUPER_ADMIN, CENTRE_OWNER, CENTRE_MANAGER, ACCOUNTANT, TEACHER, STUDENT, GUARDIAN)
+  isActive    Boolean      @default(true)
+  isPrimary   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, centreId])
+  @@index([centreId])
+  @@index([userId])
+}
+
+model StudentProfile {
+  id                String       @id @default(uuid())
+  userId            String       @unique
+  registrationNumber String      @unique // e.g. EXS/2026/001
+  targetExam        String       @default("JAMB_UTME") // TargetExam
+  targetCourse      String?      // e.g. "Medicine & Surgery"
+  targetInstitution String?      // e.g. "University of Lagos (UNILAG)"
+  guardianName      String?
+  guardianPhone     String?
+  guardianEmail     String?
+  dateOfBirth       DateTime?
+  address           String?
+  enrollmentDate    DateTime     @default(now())
+  studyMateId       String?      // Linked StudyMate account ID
+  lastSsoAt         DateTime?    // Timestamp of last StudyMate SSO launch
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments       ClassEnrollment[]
+  attendanceRecords AttendanceRecord[]
+  invoices          Invoice[]
+  supportTickets    SupportTicket[]
+}
+
+model StaffProfile {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  staffCode      String       @unique // e.g. STF/2026/04
+  specialization String?      // e.g. "Senior Physics & Mathematics Tutor"
+  qualification  String?      // e.g. "B.Sc Physics, Ed"
+  hireDate       DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Programme {
+  id          String       @id @default(uuid())
+  centreId    String
+  name        String       // e.g., "JAMB Intensive Crash Course", "WAEC Day/Weekend Masterclass"
+  code        String       // e.g., "JAMB-2026"
+  description String?
+  examCategory String      @default("JAMB_UTME")
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  classBatches ClassBatch[]
+
+  @@unique([centreId, code])
+  @@index([centreId])
+}
+
+model ClassBatch {
+  id          String       @id @default(uuid())
+  centreId    String
+  branchId    String?
+  programmeId String
+  name        String       // e.g., "Morning Batch Alpha", "Weekend Intensive"
+  schedule    String?      // e.g., "Mon-Fri 8:30am - 1:30pm"
+  capacity    Int          @default(40)
+  roomNumber  String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  branch      Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  programme   Programme    @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  enrollments ClassEnrollment[]
+  attendanceSessions AttendanceSession[]
+  timetableSlots TimetableSlot[]
+
+  @@index([centreId])
+  @@index([programmeId])
+}
+
+model Subject {
+  id          String       @id @default(uuid())
+  centreId    String
+  name        String       // e.g., "Mathematics", "Use of English", "Physics", "Chemistry"
+  code        String       // e.g., "MTH", "ENG", "PHY"
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  timetableSlots TimetableSlot[]
+
+  @@unique([centreId, code])
+  @@index([centreId])
+}
+
+model ClassEnrollment {
+  id            String       @id @default(uuid())
+  studentId     String
+  classBatchId  String
+  status        String       @default("ACTIVE") // ACTIVE, COMPLETED, WITHDRAWN
+  enrolledAt    DateTime     @default(now())
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classBatch    ClassBatch     @relation(fields: [classBatchId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classBatchId])
+  @@index([classBatchId])
+}
+
+model AttendanceSession {
+  id            String       @id @default(uuid())
+  centreId      String
+  classBatchId  String
+  sessionDate   DateTime     @default(now())
+  topicCovered  String?
+  recordedById  String
+  createdAt     DateTime     @default(now())
+
+  classBatch    ClassBatch   @relation(fields: [classBatchId], references: [id], onDelete: Cascade)
+  records       AttendanceRecord[]
+
+  @@index([centreId])
+  @@index([classBatchId])
+}
+
+model AttendanceRecord {
+  id                  String   @id @default(uuid())
+  attendanceSessionId String
+  studentId           String
+  status              String   @default("PRESENT") // AttendanceStatus
+  remarks             String?
+
+  session             AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+  student             StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceSessionId, studentId])
+  @@index([studentId])
+}
+
+model FeeStructure {
+  id          String       @id @default(uuid())
+  centreId    String
+  name        String       // e.g. "Full Term Tuition (JAMB)", "Past Question Booklet Fee"
+  amount      Float
+  category    String       // TUITION, REGISTRATION, MATERIALS, MOCK_EXAM
+  isOptional  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+
+  @@index([centreId])
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  centreId       String
+  studentId      String
+  feeStructureId String?
+  invoiceNumber  String        @unique // e.g., INV/2026/001
+  title          String
+  totalAmount    Float
+  paidAmount     Float         @default(0)
+  status         String        @default("UNPAID") // InvoiceStatus
+  dueDate        DateTime?
+  issuedAt       DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  centre         Centre        @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeStructure   FeeStructure?  @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+  payments       Payment[]
+
+  @@index([centreId])
+  @@index([studentId])
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  centreId      String
+  invoiceId     String
+  receiptNumber String   @unique // e.g. RCP/2026/001
+  amount        Float
+  paymentMethod String   @default("BANK_TRANSFER") // PaymentMethod
+  reference     String?  // Bank transfer session ID or Paystack reference
+  notes         String?
+  recordedBy    String?  // Staff name
+  paidAt        DateTime @default(now())
+
+  centre        Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([centreId])
+  @@index([invoiceId])
+}
+
+model TimetableSlot {
+  id          String       @id @default(uuid())
+  centreId    String
+  classBatchId String
+  subjectId   String
+  dayOfWeek   Int          // 1 = Monday, 2 = Tuesday, etc.
+  startTime   String       // "09:00"
+  endTime     String       // "10:30"
+  teacherName String?
+  room        String?
+
+  classBatch  ClassBatch   @relation(fields: [classBatchId], references: [id], onDelete: Cascade)
+  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([classBatchId])
+}
+
+model Announcement {
+  id          String       @id @default(uuid())
+  centreId    String
+  title       String
+  content     String
+  audience    String       @default("ALL") // ALL, STAFF, STUDENTS, PARENTS
+  isPinned    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  centre      Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+
+  @@index([centreId])
+}
+
+model CentreSubscription {
+  id              String   @id @default(uuid())
+  centreId        String   @unique
+  tier            String   @default("STANDARD") // SubscriptionTier
+  status          String   @default("ACTIVE")   // SubscriptionStatus
+  maxStudents     Int      @default(150)
+  monthlyFeeNgn   Float    @default(10000)
+  currentPeriodEnd DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  centre          Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+}
+
+// Extensibility hook for future Phase 5 Tutorial College Integration
+model LearningIntegration {
+  id               String       @id @default(uuid())
+  centreId         String       @unique
+  isEnabled        Boolean      @default(false)
+  tcCentreApiKey   String?
+  lastSyncAt       DateTime?
+  connectedStudents Int         @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  centre           Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  entitlements     LearningEntitlement[]
+}
+
+model LearningEntitlement {
+  id                    String              @id @default(uuid())
+  learningIntegrationId String
+  studentUserId         String
+  tcStudentExternalId   String?             // External Tutorial College user identifier
+  hasActiveAccess       Boolean             @default(false)
+  accessExpiresAt       DateTime?
+  lastLaunchAt          DateTime?
+
+  integration           LearningIntegration @relation(fields: [learningIntegrationId], references: [id], onDelete: Cascade)
+
+  @@unique([learningIntegrationId, studentUserId])
+}
+
+model AuditLog {
+  id          String       @id @default(uuid())
+  centreId    String?
+  userId      String?
+  action      String       // e.g. "USER_LOGIN", "STUDENT_ENROLLED", "PAYMENT_RECORDED", "CENTRE_VERIFIED"
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime     @default(now())
+
+  centre      Centre?      @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([centreId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  centreId    String
+  userId      String
+  title       String
+  message     String
+  type        String   @default("GENERAL") // ATTENDANCE, PAYMENT, ANNOUNCEMENT, TIMETABLE, GENERAL
+  linkUrl     String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  centre      Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([centreId])
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  centreId    String
+  studentId   String
+  subject     String
+  category    String   @default("ACADEMIC") // ACADEMIC, FEES, TIMETABLE, TECHNICAL, OTHER
+  message     String
+  status      String   @default("SUBMITTED") // SUBMITTED, IN_PROGRESS, RESOLVED
+  adminReply  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  centre      Centre         @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([centreId])
+}
+
+model SubscriptionPlan {
+  id              String   @id @default(uuid())
+  name            String
+  code            String   @unique
+  description     String?
+  priceNgn        Float
+  billingInterval String   @default("MONTHLY")
+  studentLimit    Int
+  staffLimit      Int      @default(10)
+  featuresJson    String   @default("[]")
+  isActive        Boolean  @default(true)
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SaasPayment {
+  id                 String   @id @default(uuid())
+  centreId           String
+  centre             Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  planCode           String
+  amountNgn          Float
+  currency           String   @default("NGN")
+  paymentMethod      String   @default("ONLINE_PAYSTACK")
+  paystackRef        String?  @unique
+  paystackTransId    String?
+  status             String   @default("SUCCESS")
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  receiptNumber      String   @unique
+  metadataJson       String?
+  createdAt          DateTime @default(now())
+
+  @@index([centreId])
+  @@index([status])
+}
+
+model PlatformAnnouncement {
+  id               String    @id @default(uuid())
+  title            String
+  content          String
+  priority         String    @default("NORMAL")
+  targetAudience   String    @default("ALL")
+  centreIdsJson    String?
+  isActive         Boolean   @default(true)
+  startsAt         DateTime  @default(now())
+  expiresAt        DateTime?
+  createdByAdminId String
+  createdAt        DateTime  @default(now())
+}
+
+model PlatformSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  category    String   @default("GENERAL")
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
